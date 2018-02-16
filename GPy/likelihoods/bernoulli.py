@@ -26,7 +26,7 @@ class Bernoulli(Likelihood):
 
         super(Bernoulli, self).__init__(gp_link, 'Bernoulli')
 
-        if isinstance(gp_link , (link_functions.Heaviside, link_functions.Probit)):
+        if isinstance(gp_link , (link_functions.Heaviside, link_functions.Probit, link_functions.TunableProbit)):
             self.log_concave = True
 
     def to_dict(self):
@@ -69,7 +69,20 @@ class Bernoulli(Likelihood):
 
             mu_hat = v_i/tau_i + sign*phi_div_Phi/np.sqrt(tau_i**2 + tau_i)
             sigma2_hat = 1./tau_i - (phi_div_Phi/(tau_i**2+tau_i))*(z+phi_div_Phi)
-
+        elif isinstance(self.gp_link, link_functions.TunableProbit):
+            nu = self.gp_link.nu
+            mu = v_i/tau_i
+            sigma2 = 1./tau_i
+            t = 1 + sigma2*(nu**2)
+            t[t<1e-20] = 1e-20
+            a = np.sqrt(t)
+            z = obs*mu/a
+            #normc_z = max(self.gp_link.transf(z), 1e-20)
+            m0 = z #normc_z
+            normp_z = self.gp_link.dtransf_df(z)
+            mu_hat = mu + (obs*sigma2*normp_z)/(normc_z*a)
+            sigma2_hat = sigma2 - ((sigma2**2)*normp_z)/((1./(nu**2)+sigma2)*normc_z)*(z + normp_z/(nu**2)/normc_z)
+            return m0, mu_hat, sigma2_hat
         elif isinstance(self.gp_link, link_functions.Heaviside):
             z = sign*v_i/np.sqrt(tau_i)
             phi_div_Phi = derivLogCdfNormal(z)
@@ -84,7 +97,7 @@ class Bernoulli(Likelihood):
         return np.exp(log_Z_hat), mu_hat, sigma2_hat
 
     def variational_expectations(self, Y, m, v, gh_points=None, Y_metadata=None):
-        if isinstance(self.gp_link, link_functions.Probit):
+        if isinstance(self.gp_link, (link_functions.Probit, link_functions.TunableProbit)):
 
             if gh_points is None:
                 gh_x, gh_w = self._gh_points()
@@ -111,7 +124,7 @@ class Bernoulli(Likelihood):
 
     def predictive_mean(self, mu, variance, Y_metadata=None):
 
-        if isinstance(self.gp_link, link_functions.Probit):
+        if isinstance(self.gp_link, (link_functions.Probit, link_functions.TunableProbit)):
             return std_norm_cdf(mu/np.sqrt(1+variance))
 
         elif isinstance(self.gp_link, link_functions.Heaviside):

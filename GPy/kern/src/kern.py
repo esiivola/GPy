@@ -178,6 +178,24 @@ class Kern(Parameterized):
         """
         raise NotImplementedError
 
+    def dgradients_dX(self, X, X2, dimX):
+        """
+        Gradients of dK_dX w.r.t. to hyper-parameters
+        """
+        raise NotImplementedError
+
+    def dgradients_dX2(self, X, X2, dimX2):
+        """
+        Gradients of dK_dX2 w.r.t. to hyper-parameters
+        """
+        raise NotImplementedError
+
+    def dgradients2_dXdX2(self, X, X2, dimX, dimX2):
+        """
+        Gradients of d2K_dXdX2 w.r.t. to hyper-parameters
+        """
+        raise NotImplementedError
+
     def update_gradients_diag(self, dL_dKdiag, X):
         """ update the gradients of all parameters when using only the diagonal elements of the covariance matrix"""
         raise NotImplementedError
@@ -188,6 +206,12 @@ class Kern(Parameterized):
     
     def reset_gradients(self):
         raise NotImplementedError
+
+    def _project_dim(self, dim):
+        try:
+            return np.where(self._all_dims_active == dim)[0][0]
+        except:
+            return None
 
     def update_gradients_expectations(self, dL_dpsi0, dL_dpsi1, dL_dpsi2, Z, variational_posterior):
         """

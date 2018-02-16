@@ -110,6 +110,27 @@ class Probit(GPTransformation):
         input_dict["class"] = "GPy.likelihoods.link_functions.Probit"
         return input_dict
 
+class TunableProbit(Probit):
+    """
+    .. math::
+
+        g(f) = \\Phi^{-1} (mu*nu)
+
+    """
+    def __init__(self, nu=1.):
+        self.nu = nu
+        
+    def transf(self,f):
+        return std_norm_cdf(f*self.nu)
+
+    def dtransf_df(self,f):
+        return std_norm_pdf(f*self.nu)*self.nu
+
+    def d2transf_df2(self,f):
+        return -(f*self.nu) * std_norm_pdf(f*self.nu)*(self.nu**2)
+
+    def d3transf_df3(self,f):
+        return (safe_square(f*self.nu)-1.)*std_norm_pdf(f*self.nu)*(self.nu**3)
 
 class Cloglog(GPTransformation):
     """
